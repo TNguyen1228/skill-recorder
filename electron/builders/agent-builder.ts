@@ -1,6 +1,8 @@
 import { CopilotClient, type CopilotSession } from "@github/copilot-sdk";
 
 import { COPILOT_SIGNED_OUT_ERROR } from "../../common/ipc";
+import type { AnalysisProvider } from "../analysis-provider";
+import { currentAnalysisProvider } from "../analysis-settings";
 import { copilotConnectionOption, withStartupTimeout } from "../copilot-cli-path";
 import { createLogger } from "../logger";
 
@@ -24,6 +26,8 @@ export abstract class AgentBuilder<TLive extends BaseLive> {
   private client: CopilotClient | null = null;
   private clientStart: Promise<CopilotClient> | null = null;
   protected model: string | undefined;
+  /** Custom provider selected in Settings or the environment, or null when running on Copilot. */
+  protected byok: AnalysisProvider | null = null;
   protected readonly live = new Map<string, TLive>();
   protected readonly active = new Set<string>();
   protected readonly log;
@@ -31,6 +35,11 @@ export abstract class AgentBuilder<TLive extends BaseLive> {
   /** @param name Used for logs and the "not signed in" / startup-timeout messages. */
   constructor(private readonly name: string) {
     this.log = createLogger(name);
+  }
+
+  /** True while any build is running. */
+  isBusy(): boolean {
+    return this.active.size > 0;
   }
 
   isBuilding(sessionId: string): boolean {
@@ -66,15 +75,23 @@ export abstract class AgentBuilder<TLive extends BaseLive> {
     if (this.client) return this.client;
     if (this.clientStart) return this.clientStart;
     this.clientStart = (async () => {
+      const byok = currentAnalysisProvider();
+      this.byok = byok;
       const client = new CopilotClient(copilotConnectionOption());
       await withStartupTimeout(client.start(), `Copilot CLI (${this.name})`);
-      const auth = await client.getAuthStatus();
-      if (!auth.isAuthenticated) {
-        await client.stop().catch(() => undefined);
-        throw new Error(COPILOT_SIGNED_OUT_ERROR);
+      if (byok) {
+        // Custom provider: Copilot credentials aren't used, so don't require them.
+        this.model = byok.model;
+        this.log.info("Custom provider ready", byok.label);
+      } else {
+        const auth = await client.getAuthStatus();
+        if (!auth.isAuthenticated) {
+          await client.stop().catch(() => undefined);
+          throw new Error(COPILOT_SIGNED_OUT_ERROR);
+        }
+        this.model = process.env.SKILL_RECORDER_MODEL || undefined;
+        this.log.info("Copilot ready", auth.login ? `as ${auth.login}` : "");
       }
-      this.model = process.env.SKILL_RECORDER_MODEL || undefined;
-      this.log.info("Copilot ready", auth.login ? `as ${auth.login}` : "");
       this.client = client;
       return client;
     })();

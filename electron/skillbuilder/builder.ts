@@ -5,6 +5,8 @@ import path from "node:path";
 
 import { approveAll, type CopilotSession } from "@github/copilot-sdk";
 
+import { providerSessionOptions } from "../analysis-provider";
+
 import {
   BuiltSkillSchema,
   renderSkillMarkdown,
@@ -354,6 +356,7 @@ export class SkillBuilder extends AgentBuilder<LiveBuild> {
       infiniteSessions: { enabled: false },
       availableTools: tools.map((t) => t.name),
       ...(this.model ? { model: this.model } : {}),
+      ...providerSessionOptions(this.byok),
     });
 
     const live: LiveBuild = {

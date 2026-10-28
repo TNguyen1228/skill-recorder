@@ -13,6 +13,7 @@ import type {
   SkillPreview,
 } from "../common/ipc";
 import { isCopilotSignedOutError } from "../common/ipc";
+import { SettingsModal } from "./SettingsModal";
 import type {
   BuildTarget,
   BuiltSkill,
@@ -51,6 +52,9 @@ export function Library() {
   const [loaded, setLoaded] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [narrationStatus, setNarrationStatus] = useState<NarrationStatus | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsNote, setSettingsNote] = useState<string | null>(null);
+  const settingsButton = useRef<HTMLButtonElement>(null);
 
   const loadSessions = useCallback(async () => {
     const list = await window.skillRecorder.listSessions();
@@ -101,7 +105,20 @@ export function Library() {
         <div className="lib-list-head">
           <span className="eyebrow">Sessions</span>
           <span className="pill">{sessions.length}</span>
+          <button
+            ref={settingsButton}
+            className="ghost lib-settings-btn"
+            onClick={() => setSettingsOpen(true)}
+            title="Choose the model used for analysis"
+          >
+            Settings
+          </button>
         </div>
+        {settingsNote && (
+          <button className="sess-notice info" onClick={() => setSettingsNote(null)} title="Dismiss">
+            {settingsNote}
+          </button>
+        )}
         {notice && (
           <button className="sess-notice" onClick={() => setNotice(null)} title="Dismiss">
             {notice}
@@ -132,6 +149,13 @@ export function Library() {
           </div>
         )}
       </main>
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          onSaved={setSettingsNote}
+          restoreFocus={() => settingsButton.current?.focus()}
+        />
+      )}
     </div>
   );
 }

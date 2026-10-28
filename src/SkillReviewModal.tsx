@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import type { SkillPlacement, SkillPreview } from "../common/ipc";
 import type { SkillPlacementModel } from "./skill-placement";
+import { useModalDialog } from "./use-modal-dialog";
 
 export function SkillReviewModal({
   preview,
@@ -32,56 +33,7 @@ export function SkillReviewModal({
   const dialog = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-
-  useEffect(() => {
-    const node = dialog.current!;
-    const backdrop = node.parentElement!;
-    const background = [...document.body.children]
-      .filter((element): element is HTMLElement => element instanceof HTMLElement && element !== backdrop)
-      .map((element) => ({ element, inert: element.inert }));
-    for (const { element } of background) element.inert = true;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    node.focus();
-
-    const keepFocus = (event: FocusEvent) => {
-      if (!node.contains(event.target as Node)) node.focus();
-    };
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        closeRef.current();
-      } else if (event.key === "Tab") {
-        const focusable = [...node.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), [href], input:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
-        )].filter((element) => element.getClientRects().length > 0);
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (!first) {
-          event.preventDefault();
-          node.focus();
-        } else if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === node)) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", keydown, true);
-    document.addEventListener("focusin", keepFocus);
-    return () => {
-      document.removeEventListener("keydown", keydown, true);
-      document.removeEventListener("focusin", keepFocus);
-      for (const { element, inert } of background) element.inert = inert;
-      document.body.style.overflow = previousOverflow;
-      queueMicrotask(restoreFocus);
-    };
-  }, [restoreFocus]);
+  useModalDialog(dialog, onClose, restoreFocus);
 
   return createPortal(
     <div className="sheet-backdrop" onClick={(event) => {

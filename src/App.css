@@ -1904,6 +1904,11 @@ button:focus-visible,
   border-radius: 8px;
 }
 
+.sess-notice.info {
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
 .lib-detail {
   flex: 1;
   min-width: 0;
@@ -3566,6 +3571,127 @@ button:focus-visible,
 }
 .day-chip.on {
   border-color: var(--brand);
+  color: var(--brand-ink);
+  background: var(--signal-dim);
+}
+
+/* --- Settings -------------------------------------------------------------- */
+.lib-settings-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+}
+
+.settings-sheet {
+  max-width: 460px;
+}
+
+.settings-sheet .sheet-head {
+  justify-content: space-between;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.settings-legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.settings-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.settings-choice.on {
+  border-color: var(--signal);
+  background: var(--signal-dim);
+}
+
+.settings-choice input {
+  margin-top: 3px;
+  accent-color: var(--brand);
+}
+
+.settings-choice > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-hint {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.settings-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 2px 0;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-field > label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.settings-test {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-test-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-test-result {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  border-radius: 9px;
+  padding: 9px 11px;
+}
+
+.settings-test-result.ok {
+  color: var(--go);
+  background: hsl(158, 60%, 94%);
+}
+
+.settings-test-result.warn {
+  color: var(--warn);
+  background: rgba(var(--warn-rgb), 0.12);
+}
+
+.settings-test-result.fail {
   color: var(--brand-ink);
   background: var(--signal-dim);
 }

@@ -1,4 +1,10 @@
 import type { Analysis, AnalysisFeedback, AnalysisStep, Confidence } from "./analysis";
+import type {
+  AnalysisProviderSaveInput,
+  AnalysisProviderSaveResult,
+  AnalysisProviderStatus,
+  AnalysisProviderTestResult,
+} from "./analysis-provider";
 import type { AutomationPlan, BuiltAutomation } from "./automation";
 import type { MicrophoneDevice } from "./microphone";
 import type { NarrationLanguage } from "./narration";
@@ -467,6 +473,10 @@ export const IPC = {
   doctor: "doctor:check",
   copilotSignIn: "copilot:sign-in",
   copilotSignInCancel: "copilot:sign-in-cancel",
+  analysisProviderGet: "analysis-provider:get",
+  analysisProviderSave: "analysis-provider:save",
+  analysisProviderTest: "analysis-provider:test",
+  analysisProviderTestCancel: "analysis-provider:test-cancel",
   statusChanged: "recorder:status-changed",
   recordingPrivacyReviewed: "recorder:privacy-reviewed",
   recordingPrivacyWarningRequested: "recorder:privacy-warning-requested",
@@ -551,6 +561,13 @@ export interface SkillRecorderApi {
    */
   copilotSignIn(attemptId: string): Promise<CopilotSignInResult>;
   cancelCopilotSignIn(attemptId: string): Promise<void>;
+  /** Which model powers analysis and the builders: Copilot, or the user's own provider. */
+  analysisProviderStatus(): Promise<AnalysisProviderStatus>;
+  /** Save that choice. The API key goes one way only: it is never returned. */
+  saveAnalysisProvider(input: AnalysisProviderSaveInput): Promise<AnalysisProviderSaveResult>;
+  /** Try the draft settings (unsaved) against the provider: text round-trip, then an image. */
+  testAnalysisProvider(input: AnalysisProviderSaveInput): Promise<AnalysisProviderTestResult>;
+  cancelAnalysisProviderTest(): Promise<void>;
   onStatusChanged(cb: (status: RecorderStatus) => void): () => void;
   openTerminal(): Promise<TerminalActionResult>;
   terminalReady(): Promise<TerminalActionResult>;

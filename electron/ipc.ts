@@ -29,11 +29,14 @@ import type {
   SkillPreviewResult,
 } from "../common/ipc";
 import { IPC } from "../common/ipc";
+import type { AnalysisProviderSaveInput } from "../common/analysis-provider";
 import type { AutomationPlan } from "../common/automation";
 import type { NarrationLanguage } from "../common/narration";
 import type { SensitiveReport } from "../common/sensitive";
 import type { SkillPlan } from "../common/skill";
 import { AutomationBuilder, loadPersistedAutomation } from "./automationbuilder/builder";
+import { testAnalysisProvider } from "./analysis-provider-test";
+import type { AnalysisSettingsStore } from "./analysis-settings";
 import { cancelCopilotSignIn, disposeCopilotSignIn, openCopilotSignIn } from "./copilot-signin";
 import { buildDebugInfo, writeDebugBundle } from "./debug-bundle";
 import { Describer, loadPersistedAnalysis } from "./describer/describer";
@@ -69,6 +72,7 @@ export function registerIpc(
   sensitiveModels: SensitiveModelManager,
   isRecordingStartPending: () => boolean,
   canForceTerminalFinish: (sender: WebContents) => boolean,
+  analysisSettings: AnalysisSettingsStore,
 ): void {
   ipcMain.handle(IPC.stop, (event, forceTerminal?: boolean) => {
     if (forceTerminal === true && !canForceTerminalFinish(event.sender)) {
@@ -182,6 +186,50 @@ export function registerIpc(
   ipcMain.handle(IPC.copilotSignInCancel, (event, attemptId: unknown) => {
     if (typeof attemptId !== "string") throw new Error("Invalid sign-in attempt.");
     cancelCopilotSignIn(attemptId, event.sender.id);
+  });
+  ipcMain.handle(IPC.analysisProviderGet, () => analysisSettings.status());
+  ipcMain.handle(IPC.analysisProviderSave, async (_event, input: unknown) => {
+    const status = () => analysisSettings.status();
+    if (!input || typeof input !== "object" || !("settings" in input)) {
+      return { ok: false, status: status(), error: "Invalid settings." };
+    }
+    // A running turn holds a client and live conversations on the old model;
+    // switching underneath it would corrupt that run, so wait for it to finish.
+    if (describer.isBusy() || builder.isBusy() || automationBuilder.isBusy()) {
+      return {
+        ok: false,
+        status: status(),
+        error: "Wait for the running analysis or build to finish before changing the model.",
+      };
+    }
+    const result = analysisSettings.save(input as AnalysisProviderSaveInput);
+    // Drop clients and idle conversations so the next turn starts on the new model.
+    if (result.ok) await Promise.all([describer.dispose(), builder.dispose(), automationBuilder.dispose()]);
+    return result;
+  });
+  // One connection test at a time: starting another (or closing the dialog) cancels it.
+  let providerTest: AbortController | null = null;
+  ipcMain.handle(IPC.analysisProviderTest, async (_event, input: unknown) => {
+    if (!input || typeof input !== "object" || !("settings" in input)) {
+      return { ok: false, message: "Invalid settings." };
+    }
+    let selected;
+    try {
+      selected = analysisSettings.candidate(input as AnalysisProviderSaveInput);
+    } catch (err) {
+      return { ok: false, message: err instanceof Error ? err.message : String(err) };
+    }
+    providerTest?.abort();
+    const controller = new AbortController();
+    providerTest = controller;
+    try {
+      return await testAnalysisProvider(selected, { signal: controller.signal });
+    } finally {
+      if (providerTest === controller) providerTest = null;
+    }
+  });
+  ipcMain.handle(IPC.analysisProviderTestCancel, () => {
+    providerTest?.abort();
   });
   ipcMain.handle(IPC.narrationStatus, () => narration.status());
   ipcMain.handle(IPC.narrationDownload, () => narration.downloadModel());

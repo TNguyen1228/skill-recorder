@@ -5,8 +5,10 @@ import {
   globalShortcut,
   ipcMain,
   Menu,
+  safeStorage,
   screen,
 } from "electron";
+import path from "node:path";
 
 import { FULL_CAPTURE } from "../common/config";
 import { IPC, type RecorderStatus, type StartResult } from "../common/ipc";
@@ -15,6 +17,7 @@ import type {
   TerminalActionResult,
   TerminalStatus,
 } from "../common/terminal";
+import { AnalysisSettingsStore, setAnalysisSettingsStore } from "./analysis-settings";
 import { createCollectors } from "./collectors";
 import { installCrashGuards } from "./crash-guards";
 import { Describer } from "./describer/describer";
@@ -151,6 +154,13 @@ const builder = new SkillBuilder((progress) => broadcast(IPC.skillProgress, prog
 const automationBuilder = new AutomationBuilder((progress) =>
   broadcast(IPC.automationProgress, progress),
 );
+// The model choice (Copilot or the user's own provider); the API key is encrypted by the OS.
+const analysisSettings = new AnalysisSettingsStore(path.join(app.getPath("userData"), "analysis-provider.json"), {
+  available: () => safeStorage.isEncryptionAvailable(),
+  encrypt: (plain) => safeStorage.encryptString(plain).toString("base64"),
+  decrypt: (encrypted) => safeStorage.decryptString(Buffer.from(encrypted, "base64")),
+});
+setAnalysisSettingsStore(analysisSettings);
 
 /** Open, focus, and re-dock the Sessions library window (creating it lazily). */
 function openLibrary(): void {
@@ -392,6 +402,7 @@ app.whenReady().then(async () => {
         controls && !controls.isDestroyed() && sender === controls.webContents,
       );
     },
+    analysisSettings,
   );
   sensitiveModels.initialize();
   ipcMain.handle(IPC.start, () => requestStartRecording());

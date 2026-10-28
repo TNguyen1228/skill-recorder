@@ -135,6 +135,31 @@ To inspect the script before running it, set install options, update, or uninsta
 > recording data to GitHub's cloud. Skill Recorder reminds you before every recording.
 > Details in [What gets captured](#what-gets-captured).
 
+### Use a different model than Copilot
+
+By default Analyze and the Skill/Automation builders run on GitHub Copilot's models. To use
+your own model instead, open **Settings** in the Sessions window, choose **My own model
+provider**, and fill in the endpoint and model. **Test connection** checks the settings before
+you save: a text round-trip, then a test image, because analysis reads screen frames and needs
+a model that accepts images. The API key is encrypted with your operating system and never
+shown again. Copilot sign-in is then not required, and the data described in
+[What gets captured](#what-gets-captured) goes to **your** endpoint instead of GitHub.
+
+The same settings can come from environment variables, which take priority over Settings
+(useful for CI):
+
+| Variable | |
+| --- | --- |
+| `SKILL_RECORDER_PROVIDER_BASE_URL` | Required. Endpoint URL; `https`, or `http` for `localhost` only |
+| `SKILL_RECORDER_PROVIDER_MODEL` | Required. Model or deployment name; it must accept images |
+| `SKILL_RECORDER_PROVIDER_TYPE` | `openai` (default, any OpenAI-compatible API such as OpenRouter, vLLM, Ollama or LM Studio), `azure` or `anthropic` |
+| `SKILL_RECORDER_PROVIDER_API_KEY` | Optional for local servers |
+| `SKILL_RECORDER_PROVIDER_WIRE_API` | `completions` (default) or `responses` (`openai`/`azure`) |
+| `SKILL_RECORDER_PROVIDER_AZURE_API_VERSION` | Optional, `azure` only |
+
+An incomplete or invalid configuration shows an error; it never falls back to Copilot.
+The bundled agent runtime still drives the analysis, so only the model changes.
+
 ---
 
 *Everything below is for people who want the details, or want to hack on the code.*

@@ -13,6 +13,8 @@ import {
 import { COPILOT_SIGNED_OUT_ERROR, type AnalyzeProgress } from "../../common/ipc";
 import type { SessionMeta } from "../../common/types";
 import { FrameExtractor } from "../frames/extractor";
+import { providerSessionOptions, type AnalysisProvider } from "../analysis-provider";
+import { currentAnalysisProvider } from "../analysis-settings";
 import { createLogger } from "../logger";
 import { copilotConnectionOption, withStartupTimeout } from "../copilot-cli-path";
 import { sessionsRoot, sessionDir, isValidSessionId } from "../recorder/session-store";
@@ -87,6 +89,7 @@ export class Describer {
   private client: CopilotClient | null = null;
   private clientStart: Promise<CopilotClient> | null = null;
   private model: string | undefined;
+  private byok: AnalysisProvider | null = null;
   private readonly live = new Map<string, LiveSession>();
   private readonly active = new Set<string>();
 
@@ -151,6 +154,11 @@ export class Describer {
     if (live) await live.copilot.abort().catch(() => undefined);
   }
 
+  /** True while any analyze/feedback turn is running. */
+  isBusy(): boolean {
+    return this.active.size > 0;
+  }
+
   /** True while an analyze/feedback turn is actively running for this session. */
   isAnalyzing(sessionId: string): boolean {
     return this.active.has(sessionId);
@@ -197,15 +205,23 @@ export class Describer {
     this.clientStart = (async () => {
       const connOpts = copilotConnectionOption();
       if (connOpts) log.info("CLI path resolved from node_modules");
+      const byok = currentAnalysisProvider();
+      this.byok = byok;
       const client = new CopilotClient(connOpts);
       await withStartupTimeout(client.start(), "Copilot CLI (Describer)");
-      const auth = await client.getAuthStatus();
-      if (!auth.isAuthenticated) {
-        await client.stop().catch(() => undefined);
-        throw new Error(COPILOT_SIGNED_OUT_ERROR);
+      if (byok) {
+        // Custom provider: Copilot credentials aren't used, so don't require them.
+        this.model = byok.model;
+        log.info("Custom provider ready", byok.label);
+      } else {
+        const auth = await client.getAuthStatus();
+        if (!auth.isAuthenticated) {
+          await client.stop().catch(() => undefined);
+          throw new Error(COPILOT_SIGNED_OUT_ERROR);
+        }
+        this.model = await this.pickVisionModel(client);
+        log.info("Copilot ready", auth.login ? `as ${auth.login}` : "", this.model ? `· model ${this.model}` : "");
       }
-      this.model = await this.pickVisionModel(client);
-      log.info("Copilot ready", auth.login ? `as ${auth.login}` : "", this.model ? `· model ${this.model}` : "");
       this.client = client;
       return client;
     })();
@@ -262,6 +278,7 @@ export class Describer {
       enableHostGitOperations: false,
       infiniteSessions: { enabled: false },
       ...(this.model ? { model: this.model } : {}),
+      ...providerSessionOptions(this.byok),
     };
     // Always constrain the agent to our sandboxed custom tools. If the runtime
     // cannot honor the allowlist we fail the analysis rather than silently
