@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   DEFAULT_ANALYSIS_PROVIDER_SETTINGS,
+  type AnalysisDestination,
   type AnalysisProviderSaveInput,
   type AnalysisProviderSaveResult,
   type AnalysisProviderSettings,
@@ -72,7 +73,21 @@ export class AnalysisSettingsStore {
       hasApiKey: Boolean(data.apiKey),
       secureStorage: this.cipher.available(),
       envOverride: this.envConfigured(),
+      destination: this.destination(),
     };
+  }
+
+  /** Where recording data goes, without decrypting the key or validating the rest. */
+  private destination(): AnalysisDestination {
+    const env = this.envConfigured();
+    const settings = this.load().settings;
+    if (!env && settings.mode !== "custom") return { kind: "copilot" };
+    const baseUrl = env ? this.env.SKILL_RECORDER_PROVIDER_BASE_URL : settings.baseUrl;
+    try {
+      return { kind: "custom", host: new URL(baseUrl?.trim() ?? "").host };
+    } catch {
+      return { kind: "custom" };
+    }
   }
 
   /** Validate, then persist. A custom provider must be complete and valid. */

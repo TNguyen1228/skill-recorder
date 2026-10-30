@@ -477,6 +477,7 @@ export const IPC = {
   analysisProviderSave: "analysis-provider:save",
   analysisProviderTest: "analysis-provider:test",
   analysisProviderTestCancel: "analysis-provider:test-cancel",
+  analysisProviderChanged: "analysis-provider:changed",
   statusChanged: "recorder:status-changed",
   recordingPrivacyReviewed: "recorder:privacy-reviewed",
   recordingPrivacyWarningRequested: "recorder:privacy-warning-requested",
@@ -568,6 +569,8 @@ export interface SkillRecorderApi {
   /** Try the draft settings (unsaved) against the provider: text round-trip, then an image. */
   testAnalysisProvider(input: AnalysisProviderSaveInput): Promise<AnalysisProviderTestResult>;
   cancelAnalysisProviderTest(): Promise<void>;
+  /** Fires in every window after Settings saves a different model choice. */
+  onAnalysisProviderChanged(cb: (status: AnalysisProviderStatus) => void): () => void;
   onStatusChanged(cb: (status: RecorderStatus) => void): () => void;
   openTerminal(): Promise<TerminalActionResult>;
   terminalReady(): Promise<TerminalActionResult>;

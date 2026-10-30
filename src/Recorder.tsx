@@ -18,6 +18,7 @@ import {
 } from "../common/narration";
 import { formatMs } from "./format";
 import { RecordingPrivacyWarning } from "./RecordingPrivacyWarning";
+import { useAnalysisDestination } from "./use-analysis-destination";
 import { WhatsRecorded } from "./WhatsRecorded";
 
 const IS_MAC = typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
@@ -48,6 +49,7 @@ function measureHudHeight(hud: HTMLElement): number {
 export function Recorder() {
   const [status, setStatus] = useState<RecorderStatus | null>(null);
   const [doctor, setDoctor] = useState<DoctorReport | null>(null);
+  const destination = useAnalysisDestination();
   const [narrationStatus, setNarrationStatus] = useState<NarrationStatus | null>(null);
   const [microphoneSettings, setMicrophoneSettings] =
     useState<MicrophoneSettingsStatus | null>(null);
@@ -688,7 +690,9 @@ export function Recorder() {
       {doctor && (
         <div className="doctor">
           <Row
-            label="GitHub Copilot"
+            // The bundled Copilot CLI is the agent runtime either way; with the user's own
+            // provider it no longer means the recording goes to GitHub Copilot.
+            label={destination?.kind === "custom" ? "Agent runtime" : "GitHub Copilot"}
             status={doctor.copilotCli.ok ? "good" : "bad"}
             note={doctor.copilotCli.ok ? "found" : "missing"}
           />

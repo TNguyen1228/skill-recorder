@@ -13,7 +13,9 @@ import type {
   SkillPreview,
 } from "../common/ipc";
 import { isCopilotSignedOutError } from "../common/ipc";
+import { analysisDestinationName, analysisSentTo } from "../common/analysis-provider";
 import { SettingsModal } from "./SettingsModal";
+import { useAnalysisDestination } from "./use-analysis-destination";
 import type {
   BuildTarget,
   BuiltSkill,
@@ -580,6 +582,7 @@ function AnalysisWorkspace({
   onChanged: () => void | Promise<void>;
 }) {
   const sessionId = summary.id;
+  const destination = useAnalysisDestination();
   const voicePending = summary.hasAudio && !summary.hasNarration;
   const voiceLanguage = narrationLanguageLabel(
     summary.narrationLanguage ?? DEFAULT_NARRATION_LANGUAGE,
@@ -923,11 +926,11 @@ function AnalysisWorkspace({
               Analyze recording
             </button>
             <details className="analyze-disclosure">
-              <summary>What gets sent to GitHub Copilot</summary>
+              <summary>What gets sent to {analysisDestinationName(destination)}</summary>
               <p>
                 When you choose Analyze, the event timeline (window and document titles, URLs, and
                 clipboard previews), plus screen images, narration text, and other content you
-                provide, are sent to GitHub&apos;s cloud service for processing by GitHub Copilot.{" "}
+                provide, are {analysisSentTo(destination)}.{" "}
                 <span className="cloud-analysis-caution">
                   Do not analyze a recording that may contain passwords, access tokens, API keys,
                   credentials, secrets, or other sensitive or confidential information.

@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
 
+import { analysisDestinationName } from "../common/analysis-provider";
+import { useAnalysisDestination } from "./use-analysis-destination";
+
 export function RecordingPrivacyWarning({
   starting,
   onStart,
@@ -12,6 +15,7 @@ export function RecordingPrivacyWarning({
   onClose: () => void;
 }) {
   const startRef = useRef<HTMLButtonElement>(null);
+  const destination = useAnalysisDestination();
 
   useEffect(() => {
     startRef.current?.focus({ preventScroll: true });
@@ -59,7 +63,8 @@ export function RecordingPrivacyWarning({
         </p>
         <p id="recording-warning-detail" className="recording-warning-detail">
           For complete transparency, review exactly what&apos;s captured and what may later be
-          sent to GitHub Copilot for cloud analysis.
+          sent to {analysisDestinationName(destination)}
+          {destination?.kind === "copilot" ? " for cloud analysis." : " for analysis."}
         </p>
 
         <div className="recording-warning-actions">

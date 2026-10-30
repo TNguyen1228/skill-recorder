@@ -36,6 +36,26 @@ export interface AnalysisProviderStatus {
   secureStorage: boolean;
   /** SKILL_RECORDER_PROVIDER_* environment variables are set and take priority. */
   envOverride: boolean;
+  /** Where Analyze and the builders send recording data now, environment included. */
+  destination: AnalysisDestination;
+}
+
+/** GitHub Copilot, or the user's own provider (host omitted when its URL is invalid). */
+export type AnalysisDestination = { kind: "copilot" } | { kind: "custom"; host?: string };
+
+/** Names the destination in privacy copy. null = not loaded yet, so stay generic. */
+export function analysisDestinationName(destination: AnalysisDestination | null): string {
+  if (!destination) return "the analysis model";
+  if (destination.kind === "copilot") return "GitHub Copilot";
+  return destination.host ? `your own model provider (${destination.host})` : "your own model provider";
+}
+
+/** Completes "…are " in the privacy copy that says where recording data goes. */
+export function analysisSentTo(destination: AnalysisDestination | null): string {
+  if (destination?.kind === "copilot") {
+    return "sent to GitHub's cloud service for processing by GitHub Copilot";
+  }
+  return `sent to ${analysisDestinationName(destination)}, as chosen in Settings`;
 }
 
 export interface AnalysisProviderSaveInput {

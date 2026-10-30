@@ -204,7 +204,13 @@ export function registerIpc(
     }
     const result = analysisSettings.save(input as AnalysisProviderSaveInput);
     // Drop clients and idle conversations so the next turn starts on the new model.
-    if (result.ok) await Promise.all([describer.dispose(), builder.dispose(), automationBuilder.dispose()]);
+    if (result.ok) {
+      await Promise.all([describer.dispose(), builder.dispose(), automationBuilder.dispose()]);
+      // Privacy copy in every window names where recordings go; keep it current.
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send(IPC.analysisProviderChanged, result.status);
+      }
+    }
     return result;
   });
   // One connection test at a time: starting another (or closing the dialog) cancels it.

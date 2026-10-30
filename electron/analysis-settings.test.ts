@@ -4,7 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import test, { afterEach, beforeEach } from "node:test";
 
-import { DEFAULT_ANALYSIS_PROVIDER_SETTINGS, type AnalysisProviderSettings } from "../common/analysis-provider";
+import {
+  analysisDestinationName,
+  analysisSentTo,
+  DEFAULT_ANALYSIS_PROVIDER_SETTINGS,
+  type AnalysisProviderSettings,
+} from "../common/analysis-provider";
 import { AnalysisSettingsStore, type KeyCipher } from "./analysis-settings";
 
 let dir: string;
@@ -42,6 +47,7 @@ test("defaults to Copilot when nothing is saved", () => {
     hasApiKey: false,
     secureStorage: true,
     envOverride: false,
+    destination: { kind: "copilot" },
   });
   assert.equal(store.provider(), null);
 });
@@ -62,6 +68,7 @@ test("saves a custom provider, encrypts the key, and survives a restart", () => 
   assert.equal(provider.provider.apiKey, "sk-secret");
   assert.equal(provider.provider.baseUrl, "https://api.example.com/v1");
   assert.equal(provider.model, "vision-1");
+  assert.deepEqual(second.status().destination, { kind: "custom", host: "api.example.com" });
 });
 
 test("an empty key field keeps the saved key; null removes it", () => {
@@ -84,6 +91,7 @@ test("switching back to Copilot keeps the saved details but selects no provider"
   assert.equal(store.provider(), null);
   assert.equal(result.status.settings.baseUrl, "https://api.example.com/v1");
   assert.equal(result.status.hasApiKey, true);
+  assert.deepEqual(result.status.destination, { kind: "copilot" });
 });
 
 test("an incomplete or unsafe custom provider is rejected and nothing is written", () => {
@@ -124,6 +132,25 @@ test("environment variables take priority over saved settings", () => {
   assert.equal(store.status().envOverride, true);
   assert.equal(store.provider()?.model, "env-model");
   assert.equal(store.provider()?.provider.baseUrl, "https://env.example.com");
+  assert.deepEqual(store.status().destination, { kind: "custom", host: "env.example.com" });
+});
+
+test("an invalid environment URL still reports a custom destination, never Copilot", () => {
+  const store = new AnalysisSettingsStore(file, cipher(), { SKILL_RECORDER_PROVIDER_BASE_URL: "not a url" });
+  assert.deepEqual(store.status().destination, { kind: "custom" });
+});
+
+test("privacy copy names where recordings go, and stays generic until that is known", () => {
+  assert.equal(analysisDestinationName({ kind: "copilot" }), "GitHub Copilot");
+  assert.equal(
+    analysisDestinationName({ kind: "custom", host: "localhost:11434" }),
+    "your own model provider (localhost:11434)",
+  );
+  assert.equal(analysisDestinationName({ kind: "custom" }), "your own model provider");
+  assert.equal(analysisDestinationName(null), "the analysis model");
+  assert.match(analysisSentTo({ kind: "copilot" }), /GitHub's cloud service/);
+  assert.doesNotMatch(analysisSentTo({ kind: "custom", host: "localhost:11434" }), /GitHub/);
+  assert.doesNotMatch(analysisSentTo(null), /GitHub/);
 });
 
 test("a key that can't be decrypted explains how to recover", () => {

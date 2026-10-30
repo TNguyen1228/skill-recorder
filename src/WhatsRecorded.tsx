@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 
+import { analysisSentTo } from "../common/analysis-provider";
 import type { SensitiveModelStatus } from "../common/ipc";
+import { useAnalysisDestination } from "./use-analysis-destination";
 
 /** Human-readable status for the on-device protection model shown in the sheet. */
 function protectionModelNote(status: SensitiveModelStatus | null): string {
@@ -44,6 +46,7 @@ export function WhatsRecorded({
   onDownload: () => void;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
+  const destination = useAnalysisDestination();
 
   useEffect(() => {
     sheetRef.current?.focus({ preventScroll: true });
@@ -173,8 +176,8 @@ export function WhatsRecorded({
             <li>
               When you choose Analyze, the event timeline (window and document titles, URLs, and
               clipboard previews and recorded-terminal commands), plus screen images, narration
-              text, and only the bounded terminal-output excerpts needed for analysis, are sent
-              to GitHub&apos;s cloud service and processed by GitHub Copilot.
+              text, and only the bounded terminal-output excerpts needed for analysis, are{" "}
+              {analysisSentTo(destination)}.
             </li>
             <li>
               By default, before anything is sent, this computer hides sensitive details like
