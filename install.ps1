@@ -668,7 +668,7 @@ if (Test-Path -LiteralPath $sourceDirectory -PathType Container) {
     Write-Step "Obtaining the exact source commit from GitHub."
     $sourceArchive = Join-Path $cacheRoot "skill-recorder-$Commit.zip"
     $sourceArchiveHash = Get-CachedDownload `
-      -Uri "https://codeload.github.com/microsoft/skill-recorder/zip/$Commit" `
+      -Uri "https://codeload.github.com/TNguyen1228/skill-recorder/zip/$Commit" `
       -CachePath $sourceArchive
     Assert-ZipArchive -Path $sourceArchive
 
@@ -851,7 +851,7 @@ if (Test-Path -LiteralPath $sourceDirectory -PathType Container) {
       schemaVersion = 1
       distributionMode = "source-local-build"
       commit = $Commit
-      sourceUrl = "https://github.com/microsoft/skill-recorder/tree/$Commit"
+      sourceUrl = "https://github.com/TNguyen1228/skill-recorder/tree/$Commit"
       sourceArchiveSha256 = $sourceArchiveHash
       packageLockSha256 = (Get-FileHash -LiteralPath (Join-Path $buildDirectory "package-lock.json") -Algorithm SHA256).Hash.ToLowerInvariant()
       electronExecutableSha256 = (Get-FileHash -LiteralPath $buildElectron -Algorithm SHA256).Hash.ToLowerInvariant()
